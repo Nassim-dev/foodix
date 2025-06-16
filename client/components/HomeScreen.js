@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Image, ActivityIndicator, Button } from 'react-native';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 
-export default function HomeScreen({ route }) {
+export default function HomeScreen({ navigation, route }) {
   const code = route?.params?.code;
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -30,6 +30,8 @@ export default function HomeScreen({ route }) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Bienvenue sur Foodix 🍏</Text>
+
+      {code ? <Text style={styles.code}>Dernier code scanné : {code}</Text> : <Button title="Scanner un produit" onPress={() => navigation.navigate('Scan')} />}
 
       {!code && <Text>Aucun produit scanné</Text>}
       {loading && <ActivityIndicator size="large" color="#ff6600" />}
