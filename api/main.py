@@ -1,6 +1,16 @@
 from fastapi import FastAPI, Query
 import httpx
 import logging
+import pandas as pd
+from scipy import sparse
+import pickle
+from sklearn.metrics.pairwise import cosine_similarity
+
+with open('./model/vectorizer.pkl', 'rb') as f:
+    vectorizer = pickle.load(f)
+
+green_df = pd.read_csv('./model/green_df.csv')
+green_vectors = sparse.load_npz('./model/green_vectors.npz')
 
 logging.basicConfig(
     level=logging.INFO,
@@ -46,3 +56,13 @@ async def get_product_info(barcode: str, essential: bool = Query(False)):
                 }
             }
         return data
+
+
+@app.get("/recommendation/")
+async def get_recommendation(product_name: str = Query(...)):
+    query_vec = vectorizer.transform([product_name])
+    sims = cosine_similarity(query_vec, green_vectors).flatten()
+    best_idx = int(sims.argmax())
+    best_item = green_df.iloc[best_idx].to_dict()
+    score = float(sims[best_idx])
+    return {"recommendation": best_item, "similarity": score}
