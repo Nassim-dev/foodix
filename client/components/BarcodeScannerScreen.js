@@ -1,53 +1,91 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Text, View, StyleSheet, Button } from 'react-native';
-import { Camera } from 'expo-camera';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import React, { useState } from 'react';
+import { View, Text, Button, TouchableOpacity, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 
 export default function BarcodeScannerScreen() {
-  const [hasPermission, setHasPermission] = useState(null);
+  const navigation = useNavigation();
+  const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
   const [barcodeData, setBarcodeData] = useState(null);
-  const cameraRef = useRef(null);
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-    })();
-  }, []);
+  if (!permission) return <View />;
+  if (!permission.granted) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.message}>On a besoin de la permission caméra.</Text>
+        <Button onPress={requestPermission} title="Autoriser" />
+      </View>
+    );
+  }
 
-  const handleBarCodeScanned = ({ type, data }) => {
-    setScanned(true);
-    setBarcodeData(data);
-    alert(`Code-barres scanné : ${data}`);
+  const handleBarcodeScanned = ({ type, data }) => {
+    if (!scanned) {
+      setScanned(true);
+      setBarcodeData(data);
+
+      setTimeout(() => {
+        navigation.replace('Home', { code: data });
+      }, 1000);
+
+    }
   };
-
-  if (hasPermission === null) return <Text>Demande de permission...</Text>;
-  if (hasPermission === false) return <Text>Accès caméra refusé</Text>;
 
   return (
     <View style={styles.container}>
-      <Camera
-        style={StyleSheet.absoluteFillObject}
-        ref={cameraRef}
-        onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
-        barCodeScannerSettings={{
-          barCodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e'],
-        }}
-      />
-      {scanned && <Button title="Scanner à nouveau" onPress={() => setScanned(false)} />}
-      {barcodeData && <Text style={styles.text}>Code : {barcodeData}</Text>}
+      {!showCamera ? (
+        <View style={styles.startContainer}>
+          <Button title="Scanner un produit" onPress={() => setShowCamera(true)} />
+          {barcodeData && (
+            <Text style={styles.result}>Dernier scan : {barcodeData}</Text>
+          )}
+        </View>
+      ) : (
+        <CameraView
+          style={styles.camera}
+          onBarcodeScanned={handleBarcodeScanned}
+          barcodeScannerSettings={{
+            barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e'],
+          }}
+        >
+          {/* ✅ Rectangle dynamique */}
+          <View
+            style={[
+              styles.scanBox,
+              { borderColor: scanned ? 'green' : 'orange' },
+            ]}
+          />
+        </CameraView>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1 },
+  startContainer: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  text: {
-    backgroundColor: '#fff',
-    padding: 16,
+  camera: { flex: 1 },
+  scanBox: {
+    position: 'absolute',
+    top: '30%',
+    left: '15%',
+    width: '70%',
+    height: 200,
+    borderWidth: 3,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
+  },
+  result: {
+    marginTop: 20,
+    fontSize: 16,
+  },
+  message: {
     textAlign: 'center',
+    padding: 10,
   },
 });
