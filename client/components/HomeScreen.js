@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, ActivityIndicator, Button } from 'react-native';
+import { View, Text, StyleSheet, Image, ActivityIndicator, TouchableOpacity } from 'react-native';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
+import { commonStyles } from '../styles';
 
 export default function HomeScreen({ navigation, route }) {
   const code = route?.params?.code;
@@ -28,13 +29,22 @@ export default function HomeScreen({ navigation, route }) {
   }, [code]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Bienvenue sur Foodix 🍏</Text>
+    <View style={commonStyles.container}>
+      <Text style={commonStyles.title}>Bienvenue sur Foodix 🍏</Text>
 
-      {code ? <Text style={styles.code}>Dernier code scanné : {code}</Text> : <Button title="Scanner un produit" onPress={() => navigation.navigate('Scan')} />}
+      {code ? (
+        <Text style={styles.code}>Dernier code scanné : {code}</Text>
+      ) : (
+        <TouchableOpacity style={commonStyles.button} onPress={() => navigation.navigate('Scan')}>
+          <Text style={commonStyles.buttonText}>Scanner un produit</Text>
+        </TouchableOpacity>
+      )}
 
-      {!code && <Text>Aucun produit scanné</Text>}
-      {loading && <ActivityIndicator size="large" color="#ff6600" />}
+      {loading && <ActivityIndicator size="large" color="#FF9100" style={{ marginTop: 20 }} />}
+
+      {!code && !loading && (
+        <Text style={commonStyles.subtitle}>Aucun produit scanné</Text>
+      )}
 
       {product && (
         <View style={styles.card}>
@@ -42,12 +52,12 @@ export default function HomeScreen({ navigation, route }) {
           {product.image_url && (
             <Image source={{ uri: product.image_url }} style={styles.image} />
           )}
-          <Text>Nutri-Score : {product.nutriscore.grade.toUpperCase()} ({product.nutriscore.score})</Text>
-          <Text>Éco-Score : {product.ecoscore.grade.toUpperCase()} ({product.ecoscore.score})</Text>
-          <Text>Nova Group : {product.nova_group}</Text>
+          <Text style={styles.score}>Nutri-Score : {product.nutriscore.grade.toUpperCase()} ({product.nutriscore.score})</Text>
+          <Text style={styles.score}>Éco-Score : {product.ecoscore.grade.toUpperCase()} ({product.ecoscore.score})</Text>
+          <Text style={styles.score}>Nova Group : {product.nova_group}</Text>
 
           <View style={{ marginTop: 10 }}>
-            <Text style={styles.subtitle}>⚠️ Risques santé :</Text>
+            <Text style={commonStyles.subtitle}>⚠️ Risques santé :</Text>
             <Text>Sucres : {product.health_risks.sugars} g</Text>
             <Text>Graisses : {product.health_risks.fat} g</Text>
             <Text>Gr. saturées : {product.health_risks.saturated_fat} g</Text>
@@ -63,10 +73,44 @@ export default function HomeScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, alignItems: 'center' },
-  title: { fontSize: 22, marginVertical: 10 },
-  card: { marginTop: 20, alignItems: 'center' },
-  name: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-  subtitle: { fontSize: 16, marginTop: 10, fontWeight: '600' },
-  image: { width: 150, height: 150, marginBottom: 10, borderRadius: 12 },
+  code: {
+    fontSize: 16,
+    fontStyle: 'italic',
+    color: '#4E2C00',
+    marginBottom: 10,
+  },
+  card: {
+    marginTop: 20,
+    alignItems: 'center',
+    backgroundColor: '#FFFDF6',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+    width: '100%',
+  },
+  name: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FF3D00',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  score: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginVertical: 2,
+  },
+  image: {
+    width: 150,
+    height: 150,
+    marginBottom: 10,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#FFB84D',
+  },
 });

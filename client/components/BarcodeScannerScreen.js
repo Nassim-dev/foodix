@@ -1,7 +1,8 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import React, { useState } from 'react';
-import { View, Text, Button, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { commonStyles } from '../styles';
 
 export default function BarcodeScannerScreen() {
   const navigation = useNavigation();
@@ -13,9 +14,11 @@ export default function BarcodeScannerScreen() {
   if (!permission) return <View />;
   if (!permission.granted) {
     return (
-      <View style={styles.container}>
+      <View style={commonStyles.container}>
         <Text style={styles.message}>On a besoin de la permission caméra.</Text>
-        <Button onPress={requestPermission} title="Autoriser" />
+        <TouchableOpacity style={commonStyles.button} onPress={requestPermission}>
+          <Text style={commonStyles.buttonText}>Autoriser</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -28,15 +31,16 @@ export default function BarcodeScannerScreen() {
       setTimeout(() => {
         navigation.replace('Home', { code: data });
       }, 1000);
-
     }
   };
 
   return (
-    <View style={styles.container}>
+    <View style={commonStyles.container}>
       {!showCamera ? (
         <View style={styles.startContainer}>
-          <Button title="Scanner un produit" onPress={() => setShowCamera(true)} />
+          <TouchableOpacity style={commonStyles.button} onPress={() => setShowCamera(true)}>
+            <Text style={commonStyles.buttonText}>Lancer le scan</Text>
+          </TouchableOpacity>
           {barcodeData && (
             <Text style={styles.result}>Dernier scan : {barcodeData}</Text>
           )}
@@ -49,7 +53,6 @@ export default function BarcodeScannerScreen() {
             barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e'],
           }}
         >
-          {/* ✅ Rectangle dynamique */}
           <View
             style={[
               styles.scanBox,
@@ -63,13 +66,15 @@ export default function BarcodeScannerScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   startContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  camera: { flex: 1 },
+  camera: {
+    flex: 1,
+    width: '100%',
+  },
   scanBox: {
     position: 'absolute',
     top: '30%',
@@ -83,9 +88,12 @@ const styles = StyleSheet.create({
   result: {
     marginTop: 20,
     fontSize: 16,
+    color: '#4E2C00',
   },
   message: {
     textAlign: 'center',
     padding: 10,
+    fontSize: 16,
+    color: '#4E2C00',
   },
 });
