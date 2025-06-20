@@ -1,80 +1,83 @@
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useCameraPermissions, CameraView } from 'expo-camera';
+import React, { useRef, useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { commonStyles } from '../styles';
 
-export default function BarcodeScannerScreen() {
-  const navigation = useNavigation();
+export default function BarcodeScannerScreen({ navigation, route }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
-  const [showCamera, setShowCamera] = useState(false);
-  const [barcodeData, setBarcodeData] = useState(null);
+
+  const targetSlot = route.params?.target;
+  const returnTo   = route.params?.returnTo; 
+
+  const codesRef = useRef({
+    code1: route.params?.code1 ?? null,
+    code2: route.params?.code2 ?? null,
+  });
+
+  useEffect(() => {
+    if (!permission) return;
+    if (!permission.granted) requestPermission();
+  }, [permission]);
+
+  const handleBarcodeScanned = ({ data }) => {
+    if (scanned) return;
+    setScanned(true);
+
+    if (targetSlot === 1) codesRef.current.code1 = data;
+    if (targetSlot === 2) codesRef.current.code2 = data;
+
+    setTimeout(() => {
+      if (returnTo === 'Comparaison') {
+        navigation.navigate('Main', {
+          screen: 'Comparaison',
+          params: {
+            code1: codesRef.current.code1,
+            code2: codesRef.current.code2,
+          },
+        });
+      } else {
+        navigation.navigate('Main', {
+          screen: 'Accueil',
+          params: { code: data },
+        });
+      }
+    }, 500);
+  };
 
   if (!permission) return <View />;
   if (!permission.granted) {
     return (
       <View style={commonStyles.container}>
-        <Text style={styles.message}>On a besoin de la permission caméra.</Text>
-        <TouchableOpacity style={commonStyles.button} onPress={requestPermission}>
-          <Text style={commonStyles.buttonText}>Autoriser</Text>
-        </TouchableOpacity>
+        <Text style={styles.message}>L'application a besoin d'accéder à la caméra.</Text>
       </View>
     );
   }
 
-  const handleBarcodeScanned = ({ type, data }) => {
-    if (!scanned) {
-      setScanned(true);
-      setBarcodeData(data);
-
-      setTimeout(() => {
-        navigation.replace('Home', { code: data });
-      }, 1000);
-    }
-  };
-
   return (
-    <View style={commonStyles.container}>
-      {!showCamera ? (
-        <View style={styles.startContainer}>
-          <TouchableOpacity style={commonStyles.button} onPress={() => setShowCamera(true)}>
-            <Text style={commonStyles.buttonText}>Lancer le scan</Text>
-          </TouchableOpacity>
-          {barcodeData && (
-            <Text style={styles.result}>Dernier scan : {barcodeData}</Text>
-          )}
-        </View>
-      ) : (
-        <CameraView
-          style={styles.camera}
-          onBarcodeScanned={handleBarcodeScanned}
-          barcodeScannerSettings={{
-            barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e'],
-          }}
-        >
-          <View
-            style={[
-              styles.scanBox,
-              { borderColor: scanned ? 'green' : 'orange' },
-            ]}
-          />
-        </CameraView>
+    <View style={styles.cameraContainer}>
+      <CameraView
+        style={StyleSheet.absoluteFill}
+        onBarcodeScanned={handleBarcodeScanned}
+        barcodeScannerSettings={{
+          barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e'],
+        }}
+      />
+      <View
+        style={[
+          styles.scanBox,
+          { borderColor: scanned ? 'green' : 'orange' },
+        ]}
+      />
+      {scanned && (
+        <ActivityIndicator size="large" color="#FF9100" style={styles.loader} />
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  startContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  camera: {
-    flex: 1,
-    width: '100%',
-  },
+  cameraContainer: { flex: 1, position: 'relative', backgroundColor: 'black' },
   scanBox: {
     position: 'absolute',
     top: '30%',
@@ -83,17 +86,7 @@ const styles = StyleSheet.create({
     height: 200,
     borderWidth: 3,
     borderRadius: 12,
-    backgroundColor: 'transparent',
   },
-  result: {
-    marginTop: 20,
-    fontSize: 16,
-    color: '#4E2C00',
-  },
-  message: {
-    textAlign: 'center',
-    padding: 10,
-    fontSize: 16,
-    color: '#4E2C00',
-  },
+  loader: { position: 'absolute', bottom: 40, alignSelf: 'center' },
+  message: { textAlign: 'center', padding: 20, fontSize: 16, color: '#4E2C00' },
 });

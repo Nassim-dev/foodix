@@ -20,22 +20,33 @@ logging.basicConfig(
 app = FastAPI()
 
 @app.get("/product/{barcode}")
-async def get_product_info(barcode: str, essential: bool = Query(False)):
+async def get_product_info(
+    barcode: str,
+    essential: bool = Query(False),
+    with_reco: bool = Query(False)
+):
     url = f"https://world.openfoodfacts.net/api/v2/product/{barcode}.json"
+
     async with httpx.AsyncClient() as client:
         response = await client.get(url)
         response.raise_for_status()
         data = response.json()
 
+        product = data.get("product", {})
+
         if essential:
-            product = data.get("product", {})
             nutriments = product.get("nutriments", {})
             allergens = product.get("allergens_tags", [])
             additives = product.get("additives_tags", [])
             ingredients_analysis = product.get("ingredients_analysis_tags", [])
-            return {
+            categories = product.get("categories_tags", ["unknown"])
+
+            main_category = categories[0].replace("en:", "") if categories else "unknown"
+
+            result = {
                 "product_name": product.get("product_name", "N/A"),
                 "image_url": product.get("image_url"),
+                "category": main_category, 
                 "nutriscore": {
                     "grade": product.get("nutriscore_grade", "N/A"),
                     "score": product.get("nutriscore_score", "N/A"),
@@ -55,14 +66,27 @@ async def get_product_info(barcode: str, essential: bool = Query(False)):
                     "allergens": allergens,
                 }
             }
+
+            if with_reco and result["product_name"] != "N/A":
+                try:
+                    query_text = f"{result['product_name']} {main_category}"
+                    query_vec = vectorizer.transform([query_text])
+                    sims = cosine_similarity(query_vec, green_vectors).flatten()
+                    best_idx = int(sims.argmax())
+                    best_item = green_df.iloc[best_idx].to_dict()
+                    score = float(sims[best_idx])
+
+                    result["recommendation"] = {
+                        "item": best_item,
+                        "similarity": score
+                    }
+                except Exception as e:
+                    logging.error(f"Erreur lors de la recommandation : {e}")
+                    result["recommendation"] = {
+                        "item": None,
+                        "similarity": 0.0
+                    }
+
+            return result
+
         return data
-
-
-@app.get("/recommendation/")
-async def get_recommendation(product_name: str = Query(...)):
-    query_vec = vectorizer.transform([product_name])
-    sims = cosine_similarity(query_vec, green_vectors).flatten()
-    best_idx = int(sims.argmax())
-    best_item = green_df.iloc[best_idx].to_dict()
-    score = float(sims[best_idx])
-    return {"recommendation": best_item, "similarity": score}
